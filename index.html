@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ckb" dir="rtl" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>زۆزک واتچ</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root, [data-theme="light"] {
+            --accent: #8B6914;
+            --accent-light: #C9A84C;
+            --accent-subtle: rgba(139,105,20,0.10);
+            --accent-border: rgba(139,105,20,0.25);
+            --bg:       #F5EFE0;
+            --surface:  #EDE5CF;
+            --surface2: #E5DBB8;
+            --surface3: #D9CC9A;
+            --text:       #2A1F06;
+            --text-muted: #7A6535;
+            --text-dim:   #B09A60;
+            --border:       rgba(139,105,20,0.15);
+            --border-strong: rgba(139,105,20,0.30);
+            --header-bg: rgba(245,239,224,0.96);
+            --filter-bg: rgba(245,239,224,0.98);
+            --card-bg:   #F5EFE0;
+            --card-hover:#EDE5CF;
+            --input-bg:  #EDE5CF;
+            --modal-bg:  #F5EFE0;
+            --skeleton-base: #E0D8C0;
+            --skeleton-shine: #EDE5CF;
+        }
+
+        [data-theme="dark"] {
+            --accent: #C9A84C;
+            --accent-light: #F0D98B;
+            --accent-subtle: rgba(201,168,76,0.08);
+            --accent-border: rgba(201,168,76,0.20);
+            --bg:       #1C1608;
+            --surface:  #251D0A;
+            --surface2: #2E2510;
+            --surface3: #382E16;
+            --text:       #F5EFE0;
+            --text-muted: #A08A50;
+            --text-dim:   #6A5830;
+            --border:       rgba(201,168,76,0.12);
+            --border-strong: rgba(201,168,76,0.28);
+            --header-bg: rgba(28,22,8,0.96);
+            --filter-bg: rgba(28,22,8,0.98);
+            --card-bg:   #1C1608;
+            --card-hover:#251D0A;
+            --input-bg:  #2E2510;
+            --modal-bg:  #251D0A;
+            --skeleton-base: #2E2510;
+            --skeleton-shine: #382E16;
+        }
+
+        body {
+            font-family: 'Almarai', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* HEADER */
+        header {
+            position: sticky; top: 0; z-index: 100;
+            background: var(--header-bg);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            transition: background 0.3s;
+        }
+        .header-inner {
+            max-width: 1280px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            height: 72px; gap: 1rem;
+        }
+        .logo { cursor: pointer; display: flex; flex-direction: column; line-height: 1.1; }
+        .logo-main { font-size: 1.5rem; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; }
+        .logo-sub { font-size: 0.65rem; color: var(--text-muted); letter-spacing: 0.2em; text-transform: uppercase; }
+        .header-controls { display: flex; align-items: center; gap: 0.75rem; }
+
+        .theme-toggle {
+            background: transparent;
+            border: 1px solid var(--border-strong);
+            color: var(--text-muted);
+            width: 38px; height: 38px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex; align-items: center; justify-content: center;
+            transition: border-color 0.2s, color 0.2s, transform 0.2s;
+        }
+        .theme-toggle:hover { border-color: var(--accent); color: var(--accent); transform: rotate(20deg); }
+
+        .admin-btn {
+            background: transparent;
+            border: 1px solid var(--border-strong);
+            color: var(--text-muted);
+            padding: 0.5rem 1.25rem;
+            border-radius: 2px;
+            font-family: 'Almarai', sans-serif;
+            font-size: 0.8rem; cursor: pointer;
+            transition: all 0.2s; letter-spacing: 0.05em;
+        }
+        .admin-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* HERO */
+        .hero {
+            border-bottom: 1px solid var(--border);
+            padding: 5rem 2rem; text-align: center;
+            position: relative; overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px; height: 300px;
+            background: radial-gradient(ellipse, var(--accent-subtle) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .hero-eyebrow { font-size: 0.7rem; letter-spacing: 0.3em; color: var(--accent); text-transform: uppercase; margin-bottom: 1.5rem; }
+        .hero-title { font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 300; color: var(--text); line-height: 1.1; margin-bottom: 1rem; }
+        .hero-title strong { font-weight: 700; color: var(--accent); }
+        .hero-sub { font-size: 0.95rem; color: var(--text-muted); max-width: 400px; margin: 0 auto; }
+
+        /* FILTERS */
+        .filters-bar {
+            padding: 1.5rem 2rem; border-bottom: 1px solid var(--border);
+            position: sticky; top: 72px; z-index: 90;
+            background: var(--filter-bg); backdrop-filter: blur(10px);
+            transition: background 0.3s;
+        }
+        .filters-inner { max-width: 1280px; margin: 0 auto; display: flex; gap: 1rem; align-items: center; }
+        .search-wrap { flex: 1; position: relative; }
+        .search-icon { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 1rem; pointer-events: none; }
+        .search-wrap input {
+            width: 100%; background: var(--input-bg); border: 1px solid var(--border);
+            color: var(--text); padding: 0.75rem 2.5rem 0.75rem 1rem;
+            border-radius: 2px; font-family: 'Almarai', sans-serif; font-size: 0.9rem;
+            transition: border-color 0.2s, background 0.3s; text-align: right;
+        }
+        .search-wrap input::placeholder { color: var(--text-dim); }
+        .search-wrap input:focus { outline: none; border-color: var(--accent); }
+        select#categoryFilter {
+            background: var(--input-bg); border: 1px solid var(--border); color: var(--text);
+            padding: 0.75rem 1rem; border-radius: 2px; font-family: 'Almarai', sans-serif;
+            font-size: 0.85rem; cursor: pointer; transition: border-color 0.2s, background 0.3s;
+            min-width: 160px; text-align: right;
+        }
+        select#categoryFilter:focus { outline: none; border-color: var(--accent); }
+
+        /* ADMIN PANEL */
+        #admin-panel {
+            max-width: 520px; margin: 2rem auto;
+            background: var(--surface); border: 1px solid var(--border-strong);
+            border-radius: 2px; padding: 2rem;
+            transition: background 0.3s;
+        }
+        #admin-panel h2 { color: var(--accent); font-size: 1rem; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 1.5rem; text-align: center; }
+        .form-field { margin-bottom: 0.75rem; }
+        .form-field input, .form-field select, .form-field textarea {
+            width: 100%; background: var(--surface2); border: 1px solid var(--border);
+            color: var(--text); padding: 0.75rem 1rem; border-radius: 2px;
+            font-family: 'Almarai', sans-serif; font-size: 0.9rem;
+            transition: border-color 0.2s, background 0.3s; text-align: right;
+        }
+        .form-field input::placeholder, .form-field textarea::placeholder { color: var(--text-dim); }
+        .form-field input:focus, .form-field select:focus, .form-field textarea:focus { outline: none; border-color: var(--accent); }
+        .form-field textarea { min-height: 80px; resize: vertical; }
+        .btn-gold {
+            width: 100%; background: var(--accent); color: var(--bg);
+            border: none; padding: 0.85rem 1.5rem; font-family: 'Almarai', sans-serif;
+            font-size: 0.9rem; font-weight: 700; cursor: pointer; border-radius: 2px;
+            transition: background 0.2s, color 0.2s, transform 0.15s; letter-spacing: 0.05em; margin-top: 0.25rem;
+        }
+        .btn-gold:hover { background: var(--accent-light); transform: translateY(-1px); }
+        .btn-gold:active { transform: translateY(0); }
+        .btn-outline {
+            width: 100%; background: transparent; color: var(--text-muted);
+            border: 1px solid var(--border); padding: 0.75rem 1.5rem;
+            font-family: 'Almarai', sans-serif; font-size: 0.85rem; cursor: pointer;
+            border-radius: 2px; transition: all 0.2s; margin-bottom: 0.75rem;
+        }
+        .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+       /* GRID AND CARDS */
+        .grid-wrap { max-width: 1280px; margin: 0 auto; padding: 3rem 2rem; }
+        
+        .watches-grid {
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 2rem; /* بۆشایی نێوان کاردەکان */
+        }
+
+        .watch-card {
+            background: var(--card-bg); 
+            padding: 1.5rem;
+            border-radius: 20px; /* گۆشەی خڕ */
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+            cursor: pointer; 
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        
+        .watch-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 30px rgba(0,0,0,0.15);
+            border-color: var(--accent);
+        }
+
+        .watch-img-wrap {
+            aspect-ratio: 1; overflow: hidden; margin-bottom: 1rem;
+            border-radius: 12px;
+            background: var(--surface); 
+            display: flex; align-items: center; justify-content: center;
+        
+        }
+        .watch-img-wrap img {
+            width: 100%; height: 100%; object-fit: contain;
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s;
+        }
+        .watch-card:hover .watch-img-wrap img { transform: scale(1.08); }
+
+        /* Subtle gold glow on card hover */
+        .watch-card::after {
+            content: '';
+            position: absolute; inset: 0;
+            box-shadow: inset 0 0 0 1px var(--accent-border);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .watch-card:hover::after { opacity: 1; }
+
+        .watch-category { font-size: 0.65rem; letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; margin-bottom: 0.4rem; }
+        .watch-name { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; line-height: 1.3; }
+        .watch-price { font-size: 1.3rem; font-weight: 300; color: var(--accent); }
+        .watch-price span { font-size: 0.75rem; color: var(--text-dim); margin-right: 0.25rem; }
+        .card-actions { display: flex; gap: 0.5rem; margin-top: 1.25rem; }
+        .btn-order {
+            flex: 1; background: var(--accent); color: var(--bg); border: none;
+            padding: 0.65rem 0.75rem; font-family: 'Almarai', sans-serif;
+            font-size: 0.8rem; font-weight: 700; cursor: pointer; border-radius: 2px;
+            transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+        }
+        .btn-order:hover { background: var(--accent-light); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(201,168,76,0.35); }
+        .btn-order:active { transform: translateY(0); }
+        .btn-detail {
+            flex: 1; background: transparent; color: var(--text-muted);
+            border: 1px solid var(--border); padding: 0.65rem 0.75rem;
+            font-family: 'Almarai', sans-serif; font-size: 0.8rem; cursor: pointer;
+            border-radius: 2px; transition: border-color 0.2s, color 0.2s, transform 0.15s;
+        }
+        .btn-detail:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+        .btn-detail:active { transform: translateY(0); }
+        .btn-delete {
+            display: block; width: 100%; background: transparent; color: #C0392B;
+            border: 1px solid rgba(192,57,43,0.2); padding: 0.5rem;
+            font-family: 'Almarai', sans-serif; font-size: 0.75rem; cursor: pointer;
+            border-radius: 2px; margin-top: 0.5rem; transition: all 0.2s;
+        }
+        .btn-delete:hover { background: rgba(192,57,43,0.1); border-color: #C0392B; }
+
+        /* ===== SKELETON LOADER ===== */
+        @keyframes shimmer {
+            0%   { background-position: 200% center; }
+            100% { background-position: -200% center; }
+        }
+        .skeleton-card {
+            background: var(--card-bg); padding: 1.5rem;
+        }
+        .skeleton-img {
+            aspect-ratio: 1; margin-bottom: 1.25rem;
+            background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-shine) 50%, var(--skeleton-base) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.6s ease-in-out infinite;
+        }
+        .skeleton-line {
+            height: 0.65rem; border-radius: 2px; margin-bottom: 0.6rem;
+            background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-shine) 50%, var(--skeleton-base) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.6s ease-in-out infinite;
+        }
+        .skeleton-line.short { width: 45%; }
+        .skeleton-line.medium { width: 70%; }
+        .skeleton-line.full { width: 100%; height: 1rem; }
+        .skeleton-line.price { width: 55%; height: 1.2rem; margin-top: 0.3rem; }
+        .skeleton-btns {
+            display: flex; gap: 0.5rem; margin-top: 1.25rem;
+        }
+        .skeleton-btn {
+            flex: 1; height: 2.2rem; border-radius: 2px;
+            background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-shine) 50%, var(--skeleton-base) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.6s ease-in-out infinite;
+        }
+
+        /* ===== CARD ENTRANCE ANIMATION ===== */
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .watch-card {
+            animation: cardIn 0.4s ease both;
+        }
+
+        /* DETAILS */
+        #details-page { max-width: 1280px; margin: 0 auto; padding: 3rem 2rem; }
+        .back-btn {
+            background: transparent; border: none; color: var(--text-muted);
+            font-family: 'Almarai', sans-serif; font-size: 0.85rem; cursor: pointer;
+            display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2.5rem;
+            transition: color 0.2s, transform 0.2s;
+        }
+        .back-btn:hover { color: var(--accent); transform: translateX(-3px); }
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: start; }
+        .detail-img-wrap {
+            background: var(--surface); aspect-ratio: 1;
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
+            transition: box-shadow 0.3s;
+        }
+        .detail-img-wrap:hover { box-shadow: 0 16px 48px rgba(0,0,0,0.2); }
+        .detail-img-wrap img {
+            width: 100%; height: 100%; object-fit: contain;
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .detail-img-wrap:hover img { transform: scale(1.05); }
+        .detail-info { padding: 1rem 0; }
+        .detail-cat { font-size: 0.65rem; letter-spacing: 0.25em; color: var(--accent); text-transform: uppercase; margin-bottom: 1rem; }
+        .detail-name { font-size: 2.2rem; font-weight: 700; color: var(--text); line-height: 1.2; margin-bottom: 1rem; }
+        .detail-price { font-size: 2.5rem; font-weight: 300; color: var(--accent); margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 2rem; }
+        .detail-desc { font-size: 0.9rem; color: var(--text-muted); line-height: 1.8; margin-bottom: 2.5rem; }
+        .btn-order-lg {
+            width: 100%; background: var(--accent); color: var(--bg); border: none;
+            padding: 1rem; font-family: 'Almarai', sans-serif; font-size: 1rem; font-weight: 700;
+            cursor: pointer; border-radius: 2px;
+            transition: background 0.2s, transform 0.15s, box-shadow 0.2s; letter-spacing: 0.05em;
+        }
+        .btn-order-lg:hover { background: var(--accent-light); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(201,168,76,0.4); }
+        .btn-order-lg:active { transform: translateY(0); }
+
+        /* MODAL */
+        #modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center;
+            padding: 1.5rem; z-index: 200;
+            animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-box {
+            background: var(--modal-bg); border: 1px solid var(--border-strong);
+            border-radius: 2px; padding: 2.5rem; width: 100%; max-width: 480px;
+            transition: background 0.3s;
+            animation: slideUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px) scale(0.97); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        #modal.hidden { display: none; }
+        .modal-eyebrow { font-size: 0.65rem; letter-spacing: 0.25em; color: var(--accent); text-transform: uppercase; margin-bottom: 0.5rem; }
+        .modal-title { font-size: 1.4rem; font-weight: 700; color: var(--text); margin-bottom: 2rem; }
+        .modal-field { margin-bottom: 0.75rem; }
+        .modal-field input {
+            width: 100%; background: var(--input-bg); border: 1px solid var(--border);
+            color: var(--text); padding: 0.85rem 1rem; border-radius: 2px;
+            font-family: 'Almarai', sans-serif; font-size: 0.9rem; text-align: right;
+            transition: border-color 0.2s, background 0.3s, box-shadow 0.2s;
+        }
+        .modal-field input::placeholder { color: var(--text-dim); }
+        .modal-field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
+        .modal-close {
+            width: 100%; background: transparent; border: none; color: var(--text-dim);
+            font-family: 'Almarai', sans-serif; font-size: 0.8rem; cursor: pointer;
+            padding: 0.75rem; margin-top: 0.5rem; transition: color 0.2s;
+        }
+        .modal-close:hover { color: var(--text-muted); }
+
+        /* MISC */
+        .empty-state { text-align: center; padding: 6rem 2rem; grid-column: 1/-1; background: var(--card-bg); }
+        .empty-icon { font-size: 3rem; color: var(--text-dim); margin-bottom: 1.5rem; }
+        .empty-text { font-size: 1rem; color: var(--text-muted); }
+
+        @media (max-width: 768px) {
+            .detail-grid { grid-template-columns: 1fr; gap: 2rem; }
+            .watches-grid { grid-template-columns: repeat(2,1fr); }
+            .hero { padding: 3rem 1.5rem; }
+            .filters-inner { flex-direction: column; }
+            select#categoryFilter { width: 100%; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-inner">
+        <div class="logo" onclick="location.reload()">
+            <span class="logo-main"> پێشانگای زۆزک</span>
+            <span class="logo-sub">...</span>
+        </div>
+        <div class="header-controls">
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="گۆڕینی مۆد">🌙</button>
+            <button class="admin-btn" onclick="toggleAdmin()">بەڕێوەبەر</button>
+        </div>
+    </div>
+</header>
+
+<div id="main-page">
+    <section class="hero">
+        <p class="hero-eyebrow"></p>
+        <h1 class="hero-title">پێشانگای <strong>زۆزک</strong><br>بۆ هەموو جۆرە کاتژمێرێک</h1>
+        <p class="hero-sub">Producted by KDG</p>
+    </section>
+
+    <div class="filters-bar">
+        <div class="filters-inner">
+            <div class="search-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" onkeyup="filterWatches()" placeholder="گەڕان بەدوای کاتژمێر...">
+            </div>
+            <select id="categoryFilter" onchange="filterWatches()">
+                <option value="all">هەموو جۆرەکان</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="admin-panel" class="hidden">
+        <h2>زیادکردنی کاتژمێری نوێ</h2>
+        <div class="form-field"><input type="text" id="name" placeholder="ناوی کاتژمێر"></div>
+        <div class="form-field" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+            <input type="number" id="price" placeholder="نرخ">
+            <select id="currency">
+                <option value="$">دۆلار ($)</option>
+                <option value="دینار">دینار عێراقی</option>
+            </select>
+        </div>
+        <div class="form-field"><input type="text" id="category" placeholder="جۆر"></div>
+        <div class="form-field"><textarea id="description" placeholder="تێبینی و وردەکاری..."></textarea></div>
+        <button class="btn-outline" onclick="document.getElementById('imageFile').click()">＋ هەڵبژاردنی وێنە</button>
+        <input type="file" id="imageFile" accept="image/*" class="hidden">
+        <button class="btn-gold" onclick="addWatch()">تۆمارکردن</button>
+    </div>
+
+    <div class="grid-wrap">
+        <div class="section-label">کاتژمێرەکان</div>
+        <div class="watches-grid" id="watches-list">
+            <!-- Skeleton cards shown while loading -->
+        </div>
+    </div>
+</div>
+
+<div id="details-page" class="hidden">
+    <button class="back-btn" onclick="showMain()">← گەڕانەوە بۆ لیست</button>
+    <div class="detail-grid">
+        <div class="detail-img-wrap"><img id="detailImg" src="" alt=""></div>
+        <div class="detail-info">
+            <p class="detail-cat" id="detailCategory"></p>
+            <h2 class="detail-name" id="detailTitle"></h2>
+            <p class="detail-price" id="detailPrice"></p>
+            <p class="detail-desc" id="detailDesc"></p>
+            <button class="btn-order-lg" onclick="showModalFromDetails()">داواکردن — WhatsApp</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal" class="hidden">
+    <div class="modal-box">
+        <p class="modal-eyebrow">داواکاری کاتژمێر</p>
+        <h2 class="modal-title" id="modalTitle"></h2>
+        <div class="modal-field"><input type="text" id="custName" placeholder="ناوی تەواو"></div>
+        <div class="modal-field"><input type="text" id="custAddress" placeholder="ناونیشان"></div>
+        <div class="modal-field"><input type="text" id="custPhone" placeholder="ژمارەی مۆبایل"></div>
+        <button class="btn-gold" onclick="sendOrder()">ناردن بە WhatsApp</button>
+        <button class="modal-close" onclick="closeModal()">داخستن</button>
+    </div>
+</div>
+
+<script>
+    const supabaseUrl = 'https://pdolbyvzleajbtfwhecz.supabase.co';
+    const supabaseKey = 'sb_publishable_WHAYInvpPFVKtG60jVTp9g_b1ySlYk_';
+    const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+    let allWatches = [], currentWatch = null;
+    let isAdmin = localStorage.getItem('isAdmin') === 'true';
+    if (isAdmin) document.getElementById('admin-panel').classList.remove('hidden');
+
+    // THEME
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    document.getElementById('themeBtn').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+    function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+    }
+
+    function toggleAdmin() {
+        if (isAdmin) { localStorage.setItem('isAdmin','false'); location.reload(); }
+        else { const p = prompt("پاسۆرد:"); if (p==="123456"){ localStorage.setItem('isAdmin','true'); location.reload(); } }
+    }
+
+    // SKELETON LOADER
+    function showSkeletons(count = 8) {
+        const list = document.getElementById('watches-list');
+        list.innerHTML = Array(count).fill('').map(() => `
+            <div class="skeleton-card">
+                <div class="skeleton-img"></div>
+                <div class="skeleton-line short"></div>
+                <div class="skeleton-line medium"></div>
+                <div class="skeleton-line price"></div>
+                <div class="skeleton-btns">
+                    <div class="skeleton-btn"></div>
+                    <div class="skeleton-btn"></div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async function fetchWatches() {
+        showSkeletons();
+        const { data } = await client.from('watches').select('*');
+        allWatches = data || [];
+        updateCategoryFilter();
+        renderWatches(allWatches);
+    }
+
+    function updateCategoryFilter() {
+        const f = document.getElementById('categoryFilter');
+        const cats = [...new Set(allWatches.map(w=>w.category).filter(Boolean))];
+        f.innerHTML = '<option value="all">هەموو جۆرەکان</option>' + cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+    }
+
+    function filterWatches() {
+        const s = document.getElementById('searchInput').value.toLowerCase();
+        const c = document.getElementById('categoryFilter').value;
+        renderWatches(allWatches.filter(w => w.name.toLowerCase().includes(s) && (c==='all'||w.category===c)));
+    }
+
+    function renderWatches(data) {
+        const list = document.getElementById('watches-list');
+        list.innerHTML = data.map(w => `
+            <div class="watch-card" onclick='showDetails(${JSON.stringify(w).replace(/'/g,"&#39;")})'>
+                <div class="watch-img-wrap">
+                    <img src="${w.image_url}" alt="${w.name}">
+                </div>
+                <p class="watch-category">${w.category||''}</p>
+                <h3 class="watch-name">${w.name}</h3>
+                <p class="watch-price">${w.price?.toLocaleString()} ${w.currency||'$'}</p>
+                <div class="card-actions">
+                    <button class="btn-order" onclick='event.stopPropagation(); showModal(${JSON.stringify(w).replace(/'/g,"&#39;")})'>داواکردن</button>
+                    <button class="btn-detail" onclick='event.stopPropagation(); showDetails(${JSON.stringify(w).replace(/'/g,"&#39;")})'>وردەکاری</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function showDetails(w) {
+        currentWatch = w;
+        document.getElementById('main-page').classList.add('hidden');
+        document.getElementById('details-page').classList.remove('hidden');
+        document.getElementById('detailImg').src = w.image_url;
+        document.getElementById('detailTitle').innerText = w.name;
+        document.getElementById('detailPrice').innerText = (w.currency||'$')+' '+(w.price?.toLocaleString()||'');
+        document.getElementById('detailCategory').innerText = w.category||'';
+        document.getElementById('detailDesc').innerText = w.description||'';
+        window.scrollTo(0,0);
+    }
+
+    function showMain() { document.getElementById('details-page').classList.add('hidden'); document.getElementById('main-page').classList.remove('hidden'); }
+    function showModal(w) { currentWatch=w; document.getElementById('modalTitle').innerText=w.name; document.getElementById('modal').classList.remove('hidden'); }
+    function showModalFromDetails() { document.getElementById('modalTitle').innerText=currentWatch.name; document.getElementById('modal').classList.remove('hidden'); }
+    function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+    function sendOrder() {
+        const name=document.getElementById('custName').value, addr=document.getElementById('custAddress').value, phone=document.getElementById('custPhone').value;
+        const img=encodeURI(currentWatch.image_url);
+        const msg=`سڵاو، داوای ئەم کاتژمێرەم هەیە:%0A*ناوی کاتژمێر:* ${currentWatch.name}%0A*نرخ:* ${currentWatch.price} ${currentWatch.currency||'$'}%0A*ناوی کڕیار:* ${name}%0A*ناونیشان:* ${addr}%0A*ژمارەی مۆبایل:* ${phone}%0A%0Aوێنەکە:%0A${img}`;
+        window.open(`https://wa.me/9647500305343?text=${msg}`,'_blank');
+        closeModal();
+    }
+
+    async function addWatch() {
+        const file=document.getElementById('imageFile').files[0];
+        if (!file) return alert("وێنەیەک هەڵبژێرە");
+        const safe=Date.now()+"_"+file.name.replace(/[^a-zA-Z0-9.]/g,"_");
+        await client.storage.from('watch-images').upload(safe,file);
+        const {data}=client.storage.from('watch-images').getPublicUrl(safe);
+        const wd={name:document.getElementById('name').value,price:parseFloat(document.getElementById('price').value),currency:document.getElementById('currency').value,category:document.getElementById('category').value,description:document.getElementById('description').value,image_url:data.publicUrl};
+        const {error}=await client.from('watches').insert([wd]);
+        if(error) await client.from('watches').insert([{name:wd.name,price:wd.price,category:wd.category,description:wd.description,image_url:wd.image_url}]);
+        alert("سەرکەوتوو بوو!");
+        fetchWatches();
+    }
+
+    async function deleteWatch(id) {
+        if(confirm("دڵنیای لە سڕینەوە؟")){ await client.from('watches').delete().eq('id',id); fetchWatches(); }
+    }
+
+    fetchWatches();
+</script>
+</body>
+</html>
